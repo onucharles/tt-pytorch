@@ -15,7 +15,6 @@ class TTEmbedding(nn.Module):
                  auto_shape_criterion='entropy',
                  d=3,
                  tt_rank=8,
-                 stddev=None,
                  batch_dim_last=None,
                  padding_idx=None):
 
@@ -35,7 +34,8 @@ class TTEmbedding(nn.Module):
 
         if init is None:
             if shape is None:
-                raise ValueError("if init is not provided, please specify shape")
+                raise ValueError('if init is not provided,'
+                                 ' please specify shape')
         else:
             self.shape = init.raw_shape
         
@@ -82,7 +82,7 @@ class TTEmbedding(nn.Module):
 
 class TTLinear(nn.Module):
     def __init__(self, in_features=None, out_features=None, bias=True, init=None, shape=None,
-                 auto_shapes=True, d=3, tt_rank=8, stddev=None, auto_shape_mode='ascending',
+                 auto_shapes=True, d=3, tt_rank=8, auto_shape_mode='ascending',
                  auto_shape_criterion='entropy',
                  ):
         super(TTLinear, self).__init__()
@@ -109,19 +109,16 @@ class TTLinear(nn.Module):
             init = t3.glorot_initializer(shape, tt_rank=tt_rank)
 
         self.shape = shape
-        self.weight = init.to_parameter()
-        self.parameters = self.weight.parameter
-        self.weight_t = t3.transpose(self.weight)
-
+        self.weight_t = t3.transpose(init).to_parameter()
+        self.parameters = self.weight_t.parameter
         if bias:
-            self.bias = torch.nn.Parameter(1e-2 * torch.ones(out_features))
+            self.bias = torch.nn.Parameter(1e-3 * torch.ones(out_features))
         else:
             self.register_parameter('bias', None)
 
     def forward(self, x):
         weight_t = self.weight_t
         x_t = x.transpose(0, 1)
-
         if self.bias is None:
             return t3.tt_dense_matmul(weight_t, x_t).transpose(0, 1)
         else:
